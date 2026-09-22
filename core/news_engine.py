@@ -89,15 +89,60 @@ class NewsMacroEngine:
     @classmethod
     def get_news_summary(cls) -> dict:
         news_list = cls.get_upcoming_news()
+        blackout = cls.check_news_blackout()
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "symbol": "XAUUSD",
+            "blackout": blackout,
             "active_drivers": [
                 "1. Снижение процентных ставок мировыми ЦБ (Бычий драйвер для Золота)",
                 "2. Индекс доллара DXY тестирует уровень поддержки 102.80",
                 "3. Высокий спрос азиатских покупателей и дедолларизация центробанков"
             ],
             "news": news_list
+        }
+
+    @classmethod
+    def check_news_blackout(cls, minutes_window: int = 15) -> dict:
+        """
+        Проверка 'Окна Блэкаута' (News Blackout Window).
+        За 15 минут до и 15 минут после критических новостей США (13:30 UTC и 18:00-19:00 UTC)
+        спреды брокеров расширяются до 50-100 пунктов. Робот блокирует вход для защиты депозита.
+        """
+        now = datetime.now(timezone.utc)
+        current_minute_of_day = now.hour * 60 + now.minute
+        weekday = now.weekday() # 0 = Понедельник, 4 = Пятница
+
+        # Выходные дни
+        if weekday in [5, 6]:
+            return {
+                "is_blackout": True,
+                "reason": "Рынок XAUUSD закрыт на выходные",
+                "advice": "Торги возобновятся в понедельник 00:00 UTC"
+            }
+
+        # Окно 1: 13:30 UTC (Американская статистика: CPI / NFP / PPI / Retail Sales) -> 13:15 - 13:45
+        target_1330 = 13 * 60 + 30
+        if abs(current_minute_of_day - target_1330) <= minutes_window:
+            return {
+                "is_blackout": True,
+                "reason": "🔴 ВЫХОД МАКРОСТАТИСТИКИ США (13:30 UTC)",
+                "advice": "Высокий риск раздвижения спреда! Новые входы временно заморожены."
+            }
+
+        # Окно 2: 19:00 UTC (Решение FOMC / Процентная ставка ФРС) -> 18:45 - 19:20
+        target_1900 = 19 * 60
+        if abs(current_minute_of_day - target_1900) <= minutes_window:
+            return {
+                "is_blackout": True,
+                "reason": "🔴 СТАВКА ФРС / ПРЕСС-КОНФЕРЕНЦИЯ FOMC",
+                "advice": "Аномальная волатильность! Защита капитала: режим ожидания."
+            }
+
+        return {
+            "is_blackout": False,
+            "reason": "Рыночный фон стабилен",
+            "advice": "Спреды в норме, условия для входа благоприятные"
         }
 
 news_engine = NewsMacroEngine()

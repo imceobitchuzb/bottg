@@ -307,6 +307,9 @@ class TechnicalEngine:
             summary_ru = "НЕЙТРАЛЬНО"
             color = "#eab308"
 
+        # VSA (Volume Spread Analysis) и поглощение объема
+        vsa_analysis = cls.analyze_vsa(candles)
+
         return {
             "current_price": current_price,
             "summary": summary,
@@ -330,7 +333,66 @@ class TechnicalEngine:
                 "atr_14": atr,
                 "bollinger": bb,
                 "supertrend": supertrend
-            }
+            },
+            "vsa": vsa_analysis
+        }
+
+    @staticmethod
+    def analyze_vsa(candles: list) -> dict:
+        """
+        Volume Spread Analysis (VSA) институционального объема.
+        Определяет аномалии тикового объема, поглощение (Absorption) и кульминацию (Climax).
+        """
+        if len(candles) < 15:
+            return {"type": "NORMAL", "text": "Обычный объем", "volume_ratio": 1.0, "bias": "NEUTRAL"}
+
+        volumes = [float(c.get("tick_volume", 100)) for c in candles]
+        c = candles[-1]
+        c_open = float(c["open"])
+        c_close = float(c["close"])
+        c_high = float(c["high"])
+        c_low = float(c["low"])
+        c_vol = float(c.get("tick_volume", 100))
+
+        vol_sma = float(np.mean(volumes[-21:-1])) if len(volumes) >= 21 else float(np.mean(volumes))
+        if vol_sma <= 0:
+            vol_sma = 1.0
+        vol_ratio = round(c_vol / vol_sma, 2)
+
+        spread = max(0.1, c_high - c_low)
+        body = abs(c_close - c_open)
+        upper_wick = c_high - max(c_open, c_close)
+        lower_wick = min(c_open, c_close) - c_low
+
+        if vol_ratio >= 1.6:
+            if lower_wick / spread >= 0.45:
+                return {
+                    "type": "ABSORPTION_BUY",
+                    "text": "Институциональное поглощение продаж (Крупный лимитный покупатель) 🟢",
+                    "volume_ratio": vol_ratio,
+                    "bias": "BUY"
+                }
+            elif upper_wick / spread >= 0.45:
+                return {
+                    "type": "ABSORPTION_SELL",
+                    "text": "Институциональное поглощение покупок (Крупный лимитный продавец) 🔴",
+                    "volume_ratio": vol_ratio,
+                    "bias": "SELL"
+                }
+            elif body / spread >= 0.7:
+                is_bull = c_close > c_open
+                return {
+                    "type": "CLIMAX_EXPANSION",
+                    "text": f"Институциональный импульс ({'Бычий' if is_bull else 'Медвежий'} Displacement)",
+                    "volume_ratio": vol_ratio,
+                    "bias": "BUY" if is_bull else "SELL"
+                }
+
+        return {
+            "type": "NORMAL",
+            "text": "Стандартный объем торговой сессии",
+            "volume_ratio": vol_ratio,
+            "bias": "NEUTRAL"
         }
 
     @classmethod

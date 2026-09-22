@@ -87,17 +87,22 @@ class AutoScanner:
 
         # 3. Сканирование на новые точки входа (M5 / M15)
         signal = signal_engine.generate_signal(timeframe="M5")
+
+        # Если активно окно News Blackout — замораживаем рассылку новых входов
+        if signal.get("blackout", {}).get("is_blackout", False):
+            return
+
         direction = signal["direction"]
-        confidence_num = int(signal["confidence"].replace("%", ""))
+        confluence_score = signal.get("confluence_score", 85)
 
         now_ts = time.time()
         time_since_last = now_ts - self.last_alert_time.get(direction, 0)
 
-        # Критерии для авто-алерта:
-        # Уверенность >= 86%, прошло более 15 минут с прошлого алерта
-        if confidence_num >= 86 and time_since_last >= self.alert_cooldown_seconds:
+        # Критерии для институционального авто-алерта:
+        # Confluence Score >= 86 (Grade A+ или высокий Grade B) и кулдаун 15 минут
+        if confluence_score >= 86 and time_since_last >= self.alert_cooldown_seconds:
             self.last_alert_time[direction] = now_ts
-            logger.info(f"🚨 AUTO-SCANNER TRIGGERED NEW SETUP: {direction} @ {current_price}")
+            logger.info(f"🚨 INSTITUTIONAL AUTO-SCANNER TRIGGERED: {direction} @ {current_price} (Score: {confluence_score}/100)")
 
             # Логируем сигнал в трекер
             tracker.log_signal(
@@ -113,19 +118,26 @@ class AutoScanner:
             is_buy = direction == "BUY"
             icon = "🟢" if is_buy else "🔴"
             action_text = "ПОКУПКА (LONG)" if is_buy else "ПРОДАЖА (SHORT)"
+            grade = signal.get("grade_badge", "🏆 Grade A+")
+            dr = signal.get("dealing_range", {})
+            sess = signal.get("session", {})
+            vsa = signal.get("vsa", {})
 
             alert_text = (
-                f"🚨 <b>АВТО-СИГНАЛ XAUUSD — НАЙДЕНА ТОЧКА ВХОДА!</b>\n"
+                f"🚨 <b>ИНСТИТУЦИОНАЛЬНЫЙ СИГНАЛ XAUUSD — СЕЙЧАС!</b>\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"{grade}\n\n"
                 f"{icon} <b>Действие:</b> <b>{action_text}</b>\n"
-                f"📍 <b>Зона входа:</b> <code>{signal['entry_zone']}</code>\n"
+                f"📍 <b>Вход:</b> <code>{signal['entry_zone']}</code>\n"
                 f"🛑 <b>Stop-Loss:</b> <code>{signal['stop_loss']}</code> (-25 pips)\n"
                 f"💎 <b>TP 1:</b> <code>{signal['take_profit_1']}</code> (+35 pips)\n"
                 f"💎 <b>TP 2:</b> <code>{signal['take_profit_2']}</code> (+65 pips)\n"
                 f"💎 <b>TP 3:</b> <code>{signal['take_profit_3']}</code> (+150 pips)\n\n"
                 f"⚖️ <b>Risk/Reward:</b> {signal['risk_reward']}\n"
-                f"🛡️ <b>Вероятность:</b> {signal['confidence']}\n"
-                f"🏛️ <b>SMC:</b> {signal['smc']['structure']}\n\n"
+                f"🎯 <b>Confluence Score:</b> <b>{confluence_score}/100 🛡️</b>\n"
+                f"🏷️ <b>Диапазон (H1):</b> {dr.get('zone_ru', 'Equilibrium')}\n"
+                f"⏰ <b>Сессия:</b> {sess.get('name', 'Active')}\n"
+                f"📊 <b>Объем:</b> {vsa.get('text', 'Норма')}\n\n"
                 f"💡 <i>{signal['rationale']}</i>"
             )
 

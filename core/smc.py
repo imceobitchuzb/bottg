@@ -134,21 +134,167 @@ class SMCEngine:
             "sweeps": sweeps
         }
 
+    @staticmethod
+    def calculate_dealing_range(candles: list) -> dict:
+        """
+        Расчет институционального диапазона (Dealing Range) и Эквилибриума (50% Equilibrium).
+        Определяет зоны Premium (дорого / только продажи) и Discount (дешево / только покупки).
+        """
+        if len(candles) < 15:
+            return {
+                "range_high": 0.0,
+                "range_low": 0.0,
+                "equilibrium": 0.0,
+                "position_pct": 50.0,
+                "zone": "EQUILIBRIUM",
+                "zone_ru": "Эквилибриум (50%)",
+                "bias": "NEUTRAL"
+            }
+
+        period = min(len(candles), 40)
+        highs = [c["high"] for c in candles[-period:]]
+        lows = [c["low"] for c in candles[-period:]]
+        current_price = candles[-1]["close"]
+
+        range_high = max(highs)
+        range_low = min(lows)
+        range_span = range_high - range_low
+
+        if range_span <= 0:
+            range_span = 1.0
+
+        equilibrium = round((range_high + range_low) / 2.0, 2)
+        pos_pct = round(((current_price - range_low) / range_span) * 100.0, 1)
+
+        if pos_pct < 25.0:
+            zone = "DEEP_DISCOUNT"
+            zone_ru = "Глубокий Дисконт (<25%) 🟢"
+            bias = "STRONG_BUY_ZONE"
+        elif pos_pct < 48.0:
+            zone = "DISCOUNT"
+            zone_ru = "Зона Дисконта (Покупки) 🟢"
+            bias = "BUY_ZONE"
+        elif pos_pct <= 52.0:
+            zone = "EQUILIBRIUM"
+            zone_ru = "Баланс / Эквилибриум (50%) ⚪"
+            bias = "NEUTRAL"
+        elif pos_pct <= 75.0:
+            zone = "PREMIUM"
+            zone_ru = "Зона Премиума (Продажи) 🔴"
+            bias = "SELL_ZONE"
+        else:
+            zone = "DEEP_PREMIUM"
+            zone_ru = "Глубокий Премиум (>75%) 🔴"
+            bias = "STRONG_SELL_ZONE"
+
+        return {
+            "range_high": round(range_high, 2),
+            "range_low": round(range_low, 2),
+            "equilibrium": equilibrium,
+            "position_pct": pos_pct,
+            "zone": zone,
+            "zone_ru": zone_ru,
+            "bias": bias
+        }
+
+    @staticmethod
+    def detect_session_sweeps(candles: list, utc_hour: int = 12) -> dict:
+        """
+        Детекция сессионной ликвидности и Judas Swing (манипуляции на открытии Лондона / Нью-Йорка).
+        Азия: 00:00 - 06:00 UTC
+        Лондон: 07:00 - 10:00 UTC
+        Нью-Йорк: 12:00 - 15:00 UTC
+        """
+        if len(candles) < 24:
+            return {"active_session": "LONDON", "judas_swing": None, "session_tag": "Active"}
+
+        # Определяем текущую торговую сессию
+        if 0 <= utc_hour < 7:
+            session = "ASIA_ACCUMULATION"
+            session_ru = "🌏 Азия (Накопление ликвидности)"
+            is_killzone = False
+        elif 7 <= utc_hour < 11:
+            session = "LONDON_KILLZONE"
+            session_ru = "🇬🇧 Лондонский Kill Zone (Атака ликвидности)"
+            is_killzone = True
+        elif 11 <= utc_hour < 12:
+            session = "LONDON_LUNCH"
+            session_ru = "☕ Лондонский ланч (Пауза)"
+            is_killzone = False
+        elif 12 <= utc_hour < 16:
+            session = "NEW_YORK_KILLZONE"
+            session_ru = "🇺🇸 Нью-Йорк Kill Zone (Максимальный объем)"
+            is_killzone = True
+        elif 16 <= utc_hour < 20:
+            session = "NY_PM_SESSION"
+            session_ru = "🌇 Закрытие Нью-Йорка / Ребалансировка"
+            is_killzone = False
+        else:
+            session = "OFF_HOURS"
+            session_ru = "🌙 Межсессионная пауза"
+            is_killzone = False
+
+        # Определение границ азиатской сессии из свечей
+        highs = [c["high"] for c in candles[-24:]]
+        lows = [c["low"] for c in candles[-24:]]
+        current_candle = candles[-1]
+        current_high = current_candle["high"]
+        current_low = current_candle["low"]
+        current_close = current_candle["close"]
+
+        # Ищем Judas Swing на Лондоне или NY: снятие экстремума и закрытие обратно внутри
+        judas = None
+        swing_h = max(highs[:-2]) if len(highs) > 2 else current_high
+        swing_l = min(lows[:-2]) if len(lows) > 2 else current_low
+
+        if current_high > swing_h and current_close < swing_h:
+            judas = {
+                "type": "BEARISH_JUDAS_SWING",
+                "text": "Манипуляция: сняли хай сессии и закрылись ниже (Ложный пробой)",
+                "bias": "SELL"
+            }
+        elif current_low < swing_l and current_close > swing_l:
+            judas = {
+                "type": "BULLISH_JUDAS_SWING",
+                "text": "Манипуляция: сняли лой сессии и закрылись выше (Ложный пробой)",
+                "bias": "BUY"
+            }
+
+        return {
+            "active_session": session,
+            "session_ru": session_ru,
+            "is_killzone": is_killzone,
+            "judas_swing": judas
+        }
+
     @classmethod
-    def analyze_smc(cls, candles: list) -> dict:
+    def analyze_smc(cls, candles: list, utc_hour: int = 12) -> dict:
         fvgs = cls.detect_fvg(candles)
         obs = cls.detect_order_blocks(candles)
         structure = cls.detect_liquidity_and_structure(candles)
+        dealing_range = cls.calculate_dealing_range(candles)
+        session_info = cls.detect_session_sweeps(candles, utc_hour)
 
-        # Вывод общего смещения SMC (Bias)
-        bullish_weights = sum(1 for f in fvgs if f["type"] == "BULLISH_FVG" and not f["mitigated"]) + \
-                          sum(2 for o in obs if o["type"] == "BULLISH_OB")
-        bearish_weights = sum(1 for f in fvgs if f["type"] == "BEARISH_FVG" and not f["mitigated"]) + \
-                          sum(2 for o in obs if o["type"] == "BEARISH_OB")
+        # Вывод общего смещения SMC (Bias) с учетом диапазона и блоков
+        bullish_score = sum(1 for f in fvgs if f["type"] == "BULLISH_FVG" and not f["mitigated"]) + \
+                        sum(2 for o in obs if o["type"] == "BULLISH_OB")
+        bearish_score = sum(1 for f in fvgs if f["type"] == "BEARISH_FVG" and not f["mitigated"]) + \
+                        sum(2 for o in obs if o["type"] == "BEARISH_OB")
 
-        if bullish_weights > bearish_weights + 1:
+        if dealing_range["zone"] in ["DISCOUNT", "DEEP_DISCOUNT"]:
+            bullish_score += 2
+        elif dealing_range["zone"] in ["PREMIUM", "DEEP_PREMIUM"]:
+            bearish_score += 2
+
+        if session_info.get("judas_swing"):
+            if session_info["judas_swing"]["bias"] == "BUY":
+                bullish_score += 3
+            elif session_info["judas_swing"]["bias"] == "SELL":
+                bearish_score += 3
+
+        if bullish_score > bearish_score + 1:
             smc_bias = "BULLISH"
-        elif bearish_weights > bullish_weights + 1:
+        elif bearish_score > bullish_score + 1:
             smc_bias = "BEARISH"
         else:
             smc_bias = "NEUTRAL"
@@ -157,7 +303,10 @@ class SMCEngine:
             "bias": smc_bias,
             "fvgs": fvgs,
             "order_blocks": obs,
-            "structure": structure
+            "structure": structure,
+            "dealing_range": dealing_range,
+            "session": session_info
         }
 
 smc_engine = SMCEngine()
+

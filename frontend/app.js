@@ -164,7 +164,7 @@ async function fetchSignals(tf = activeTimeframe) {
 
     const setInner = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
     const confEl = document.getElementById('signalConfidence');
-    if (confEl) confEl.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${data.confidence} Точность`;
+    if (confEl) confEl.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${data.confidence} Confluence`;
 
     setInner('signalRR', `R:R ${data.risk_reward}`);
     setInner('entryZone', data.entry_zone);
@@ -172,6 +172,20 @@ async function fetchSignals(tf = activeTimeframe) {
     setInner('tp1Price', data.take_profit_1);
     setInner('tp2Price', data.take_profit_2);
     setInner('tp3Price', data.take_profit_3);
+
+    // Институциональные бейджи
+    const gEl = document.getElementById('instGrade');
+    if (gEl && data.grade_badge) {
+      gEl.innerHTML = `<i class="fa-solid fa-trophy"></i> ${data.grade_badge.split(' (')[0]}`;
+    }
+    const zEl = document.getElementById('instZone');
+    if (zEl && data.dealing_range) {
+      zEl.innerHTML = `<i class="fa-solid fa-tags"></i> ${data.dealing_range.zone_ru}`;
+    }
+    const sEl = document.getElementById('instSession');
+    if (sEl && data.session) {
+      sEl.innerHTML = `<i class="fa-solid fa-clock"></i> ${data.session.name.split(' (')[0]}`;
+    }
 
     const ratEl = document.getElementById('signalRationale');
     if (ratEl) ratEl.innerHTML = `💡 ${data.rationale}`;

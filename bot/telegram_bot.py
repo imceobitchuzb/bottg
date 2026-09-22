@@ -295,19 +295,28 @@ async def signal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     signal = signal_engine.generate_signal()
     is_buy = signal["direction"] == "BUY"
     icon = "🟢" if is_buy else "🔴"
+    grade = signal.get("grade_badge", "🏆 Grade A+")
+    dr = signal.get("dealing_range", {})
+    sess = signal.get("session", {})
+    vsa = signal.get("vsa", {})
+    score = signal.get("confluence_score", 85)
 
     text = (
-        f"{icon} <b>СИГНАЛ XAUUSD (MT5): {signal['signal_type']}</b>\n"
+        f"{icon} <b>ИНСТИТУЦИОНАЛЬНЫЙ СИГНАЛ XAUUSD</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🎯 <b>Зона входа:</b> <code>{signal['entry_zone']}</code>\n"
+        f"{grade}\n\n"
+        f"🎯 <b>Направление:</b> <b>{signal['direction_ru']}</b>\n"
+        f"📍 <b>Зона входа:</b> <code>{signal['entry_zone']}</code>\n"
         f"🛑 <b>Stop-Loss:</b> <code>{signal['stop_loss']}</code>\n"
         f"💎 <b>Take-Profit 1:</b> <code>{signal['take_profit_1']}</code> (Скальп)\n"
         f"💎 <b>Take-Profit 2:</b> <code>{signal['take_profit_2']}</code> (Основной)\n"
-        f"💎 <b>Take-Profit 3:</b> <code>{signal['take_profit_3']}</code> (Раннер)\n\n"
+        f"💎 <b>Take-Profit 3:</b> <code>{signal['take_profit_3']}</code> (Институциональный)\n\n"
         f"⚖️ <b>Risk/Reward:</b> {signal['risk_reward']}\n"
-        f"🛡️ <b>Вероятность отработки:</b> {signal['confidence']}\n"
-        f"📊 <b>Консенсус индикаторов:</b> {signal['technical_summary']}\n"
-        f"🏛️ <b>SMC структура:</b> {signal['smc']['structure']}\n\n"
+        f"🎯 <b>Confluence Score:</b> <b>{score}/100 🛡️</b>\n"
+        f"🏷️ <b>Dealing Range (H1):</b> {dr.get('zone_ru', 'Equilibrium')}\n"
+        f"⏰ <b>Сессия / Kill Zone:</b> {sess.get('name', 'Active')}\n"
+        f"📊 <b>Объем (VSA):</b> {vsa.get('text', 'Норма')}\n"
+        f"🏛️ <b>SMC:</b> {signal['smc']['structure']}\n\n"
         f"💡 <i>{signal['rationale']}</i>"
     )
 
@@ -327,21 +336,27 @@ async def scalp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_buy = signal["direction"] == "BUY"
     icon = "⚡ 🟢" if is_buy else "⚡ 🔴"
     action_ru = setup.get("action_ru", "СКАЛЬП ЛОНГ (ПОКУПКА)" if is_buy else "СКАЛЬП ШОРТ (ПРОДАЖА)")
+    grade = signal.get("grade_badge", "🏆 Grade A+")
+    dr = signal.get("dealing_range", {})
+    sess = signal.get("session", {})
+    vsa = signal.get("vsa", {})
 
     text = (
-        f"{icon} <b>ИНСТИТУЦИОНАЛЬНЫЙ СКАЛЬПИНГ M5 — XAUUSD (MT5)</b>\n"
+        f"{icon} <b>ИНСТИТУЦИОНАЛЬНЫЙ СКАЛЬПИНГ M5 (MT5)</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"{grade}\n\n"
         f"🎯 <b>Направление:</b> <b>{action_ru}</b>\n"
-        f"📍 <b>Точная зона входа:</b> <code>{setup.get('entry_zone', f'${price:.2f}')}</code>\n"
+        f"📍 <b>Вход:</b> <code>{setup.get('entry_zone', f'${price:.2f}')}</code>\n"
         f"🛑 <b>Stop-Loss:</b> <code>{setup.get('stop_loss', '-')}</code> ({setup.get('sl_pips', '-25 pips')})\n"
-        f"💎 <b>Take-Profit 1:</b> <code>{setup.get('take_profit_1', '-')}</code> ({setup.get('tp1_pips', '+35 pips')})\n"
-        f"💎 <b>Take-Profit 2:</b> <code>{setup.get('take_profit_2', '-')}</code> ({setup.get('tp2_pips', '+65 pips')})\n\n"
+        f"💎 <b>TP 1:</b> <code>{setup.get('take_profit_1', '-')}</code> ({setup.get('tp1_pips', '+35 pips')})\n"
+        f"💎 <b>TP 2:</b> <code>{setup.get('take_profit_2', '-')}</code> ({setup.get('tp2_pips', '+65 pips')})\n\n"
         f"⚖️ <b>Risk / Reward:</b> {setup.get('risk_reward', '1:2.6')}\n"
-        f"🛡️ <b>Винрейт сетапа:</b> {setup.get('winrate_est', '88%')}\n"
-        f"⏱️ <b>Время удержания:</b> {setup.get('holding_time', '5 - 20 минут')}\n"
-        f"📊 <b>Тренд H1 / M15:</b> {signal['technical_summary']}\n\n"
-        f"📌 <b>Правило Trade Manager:</b>\n"
-        f"<i>При взятии TP1 позиция автоматически переводится в безубыток (+5 pips)!</i>"
+        f"🎯 <b>Confluence Score:</b> <b>{signal.get('confluence_score', 85)}/100 🛡️</b>\n"
+        f"🏷️ <b>Зона:</b> {dr.get('zone_ru', 'Equilibrium')}\n"
+        f"⏰ <b>Сессия:</b> {sess.get('name', 'Active')}\n"
+        f"📊 <b>Объем:</b> {vsa.get('text', 'Норма')}\n\n"
+        f"📌 <b>Авто-менеджер Breakeven:</b>\n"
+        f"<i>При взятии TP1 позиция автоматически переносится в безубыток (+5 pips)!</i>"
     )
 
     markup = get_action_keyboard("scalp", direction=signal["direction"])
