@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>XAUUSD AI Pro Trader — MT5</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="theme-dark">
+  <div class="app-container">
+    
+    <!-- Верхний бар с котировкой XAUUSD из MT5 -->
+    <header class="terminal-header">
+      <div class="ticker-box">
+        <div class="symbol-tag">
+          <span class="gold-badge">⚜️</span>
+          <span class="symbol-name">XAUUSD</span>
+          <span class="broker-badge" id="brokerBadge">MT5 DIRECT</span>
+        </div>
+        <div class="price-display">
+          <span class="live-price" id="livePrice">4331.00</span>
+          <span class="price-change positive" id="priceChange">+0.45%</span>
+        </div>
+      </div>
+      <div class="quick-stats">
+        <div class="stat-item">
+          <span class="stat-label">BID / ASK</span>
+          <span class="stat-value" id="bidAsk">4330.85 / 4331.15</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">СПРЕД MT5</span>
+          <span class="stat-value" id="spreadVal">0.30 $</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">ДИАПАЗОН (H/L)</span>
+          <span class="stat-value" id="highLow">4291.5 - 4376.2</span>
+        </div>
+      </div>
+      <!-- Выбор рабочего таймфрейма -->
+      <div class="tf-selector-bar">
+        <span class="tf-label">ТАЙМФРЕЙМ:</span>
+        <div class="tf-buttons" id="tfSelector">
+          <button class="tf-btn" data-tf="M1">M1</button>
+          <button class="tf-btn" data-tf="M5">M5</button>
+          <button class="tf-btn active" data-tf="M15">M15</button>
+          <button class="tf-btn" data-tf="M30">M30</button>
+          <button class="tf-btn" data-tf="H1">H1</button>
+          <button class="tf-btn" data-tf="H4">H4</button>
+          <button class="tf-btn" data-tf="D1">D1</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Основной контент (4 Вкладки) -->
+    <main class="tabs-viewport">
+      
+      <!-- Вкладка 1: Пульс Рынка & Точные Сигналы -->
+      <section id="tab-signals" class="tab-pane active">
+        
+        <!-- Торговая сессия и волатильность -->
+        <div class="session-strip">
+          <div class="session-pill active" id="sessionPill">
+            <span class="pulse-dot"></span>
+            <span id="sessionName">ЛОНДОН / НЬЮ-ЙОРК СЕССИЯ</span>
+          </div>
+          <div class="session-stat">
+            <span>ВОЛАТИЛЬНОСТЬ ATR:</span>
+            <b id="atrValue">8.99 $</b>
+          </div>
+        </div>
+
+        <!-- Верифицированный трек-рекорд и винрейт 100/100 -->
+        <div class="card track-record-card">
+          <div class="card-header">
+            <h3>🏆 ТРЕК-РЕКОРД & ВИНРЕЙТ СИСТЕМЫ</h3>
+            <span class="status-live-badge"><span class="pulse-dot"></span> СКАХЕР 24/5: ВКЛ</span>
+          </div>
+          <div class="track-record-stats">
+            <div class="tr-stat">
+              <span class="tr-title">ВИНРЕЙТ</span>
+              <b class="tr-value green" id="statWinrate">87.5%</b>
+            </div>
+            <div class="tr-stat">
+              <span class="tr-title">ПРОФИТ</span>
+              <b class="tr-value gold" id="statProfit">+446 pips</b>
+            </div>
+            <div class="tr-stat">
+              <span class="tr-title">ПРОФИТ-ФАКТОР</span>
+              <b class="tr-value cyan" id="statPF">18.8</b>
+            </div>
+            <div class="tr-stat">
+              <span class="tr-title">СДЕЛОК</span>
+              <b class="tr-value" id="statTotalTrades">8 / 8</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- Спидометр TradingView / Investing -->
+        <div class="card gauge-card">
+          <div class="card-header">
+            <h3>⚡ КОНСЕНСУС ИНДИКАТОРОВ (TRADINGVIEW)</h3>
+            <span class="refresh-badge" onclick="loadAllData()"><i class="fa-solid fa-rotate"></i> Обновить</span>
+          </div>
+          <div class="gauge-wrapper">
+            <div class="gauge-arc">
+              <div class="gauge-needle" id="gaugeNeedle" style="transform: rotate(45deg);"></div>
+            </div>
+            <div class="gauge-verdict" id="gaugeVerdict">АКТИВНО ПОКУПАТЬ</div>
+            <div class="gauge-breakdown">
+              <span class="count-pill buy"><i class="fa-solid fa-arrow-up"></i> Покупка: <b id="countBuy">16</b></span>
+              <span class="count-pill neutral"><i class="fa-solid fa-minus"></i> Нейтрально: <b id="countNeutral">3</b></span>
+              <span class="count-pill sell"><i class="fa-solid fa-arrow-down"></i> Продажа: <b id="countSell">1</b></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Активный ИИ-Сигнал -->
+        <div class="card signal-card" id="signalCard">
+          <div class="signal-badge-strip">
+            <span class="badge-type buy" id="signalType">STRONG BUY</span>
+            <span class="badge-confidence" id="signalConfidence"><i class="fa-solid fa-shield-halved"></i> 89% Вероятность</span>
+            <span class="badge-rr" id="signalRR">R:R 1:2.8</span>
+          </div>
+
+          <div class="trade-levels-grid">
+            <div class="level-box entry">
+              <span class="level-title">🚪 ВХОД В MT5</span>
+              <span class="level-price" id="entryZone">4332.80 - 4333.60</span>
+            </div>
+            <div class="level-box sl">
+              <span class="level-title">🛑 СТОП-ЛОСС (SL)</span>
+              <span class="level-price" id="slPrice">4322.50</span>
+            </div>
+          </div>
+
+          <div class="tp-ladder">
+            <div class="tp-step">
+              <span class="tp-label">TP 1 (Скальп)</span>
+              <span class="tp-val" id="tp1Price">4348.00</span>
+              <span class="tp-pips">+35 pips</span>
+            </div>
+            <div class="tp-step main">
+              <span class="tp-label">TP 2 (Основной)</span>
+              <span class="tp-val" id="tp2Price">4360.50</span>
+              <span class="tp-pips">+75 pips</span>
+            </div>
+            <div class="tp-step">
+              <span class="tp-label">TP 3 (Раннер)</span>
+              <span class="tp-val" id="tp3Price">4378.00</span>
+              <span class="tp-pips">+150 pips</span>
+            </div>
+          </div>
+
+          <p class="signal-rationale" id="signalRationale">
+            💡 Золото сформировало институциональный импульс от пула ликвидности. Скользящие средние EMA 20/50/200 в восходящем тренде.
+          </p>
+
+          <button class="btn btn-primary btn-block btn-trade-mt5" onclick="executeCurrentSignal()">
+            ⚡ Открыть сделку в MetaTrader 5 в 1 клик
+          </button>
+
+          <button class="btn btn-copy" onclick="copySignalSetup()">
+            <i class="fa-regular fa-copy"></i> Скопировать сделку для MT5 вручную
+          </button>
+        </div>
+
+        <!-- Мульти-таймфрейм матрица прогнозов (5м, 10м, 15м, 30м, 1ч, 1д) -->
+        <div class="card forecast-card">
+          <div class="card-header">
+            <h3>⏱️ МАТРИЦА ПРОГНОЗОВ XAUUSD</h3>
+          </div>
+          <div class="horizons-grid" id="horizonsGrid">
+            <!-- Dynamic Injection -->
+          </div>
+        </div>
+
+        <!-- Интерактивный живой график TradingView -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>📈 ЖИВОЙ ГРАФИК XAUUSD (TRADINGVIEW)</h3>
+            <span class="chart-badge">LIVE BARS</span>
+          </div>
+          <div class="tradingview-widget-container" style="height: 340px;">
+            <iframe 
+              id="tradingviewIframe"
+              src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_7918c&symbol=OANDA%3AXAUUSD&interval=15&hidesidetoolbar=1&symboledit=1&saveimage=1&toolbarbg=0a0e17&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%22mainSeriesProperties.style%22%3A1%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=ru"
+              width="100%" 
+              height="100%" 
+              frameborder="0" 
+              allowtransparency="true" 
+              scrolling="no">
+            </iframe>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Вкладка 2: 📸 AI Vision Сканнер графиков по фото -->
+      <section id="tab-vision" class="tab-pane">
+        <div class="card vision-upload-card">
+          <div class="card-header">
+            <h3>📸 ИИ АНАЛИЗ ГРАФИКА ПО СКРИНШОТУ</h3>
+          </div>
+          <p class="section-desc">Загрузите скриншот графика Золота из MT5 или TradingView. Нейросеть мгновенно распознает свечи, уровни SMC и выдаст торговый сетап:</p>
+
+          <!-- Прямые кнопки выбора фото и камеры (работают в 100% браузеров и WebView) -->
+          <div class="upload-action-buttons">
+            <label for="chartFileInput" class="btn btn-primary btn-block upload-btn-label">
+              📁 Выбрать фото из файлов / галереи
+            </label>
+            <input type="file" id="chartFileInput" accept="image/*" class="file-input-native">
+
+            <label for="cameraFileInput" class="btn btn-secondary btn-block upload-btn-label">
+              📷 Сделать снимок экрана камерой
+            </label>
+            <input type="file" id="cameraFileInput" accept="image/*" capture="environment" class="file-input-native">
+          </div>
+
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-icon">📋</div>
+            <span class="drop-text">Или нажмите сюда и нажмите Ctrl+V для вставки</span>
+            <span class="drop-sub">Поддерживаются форматы JPG, PNG, WEBP любого таймфрейма</span>
+          </div>
+
+          <div class="demo-btn-box">
+            <button class="btn btn-outline btn-block" id="btnDemoChart" onclick="loadDemoChartAnalysis()">
+              ✨ Проверить ИИ-разбор текущего графика MT5 (без фото)
+            </button>
+          </div>
+
+          <div class="bot-photo-hint">
+            💡 <b>Совет:</b> Вы также можете просто отправить любое фото графика напрямую в чат боту <b>@MT5UZB_BOT</b> — он сразу пришлет полный разбор!
+          </div>
+
+          <div class="image-preview-container" id="imagePreviewContainer" style="display: none;">
+            <img id="imagePreview" src="" alt="Скриншот графика">
+            <button class="btn btn-secondary btn-sm" id="btnRemoveImage">🗑️ Удалить фото</button>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="btnStartVisionAnalysis" style="display: none;">
+            🧠 Запустить полный ИИ-разбор графика
+          </button>
+
+          <!-- Лоадер лазерного сканирования -->
+          <div class="scanning-loader" id="scanningLoader" style="display: none;">
+            <div class="spinner"></div>
+            <p>Нейросеть сканирует паттерны свечей, уровни SMC и объемы...</p>
+          </div>
+        </div>
+
+        <!-- Результаты разбора фото -->
+        <div class="card vision-results-card" id="visionResults" style="display: none;">
+          <div class="card-header">
+            <h3>📊 ВЕРДИКТ ИНСТИТУЦИОНАЛЬНОГО ИИ</h3>
+            <span class="badge-confidence" id="visConfidence">89% Точность</span>
+          </div>
+
+          <div class="vision-verdict-box" id="visVerdictBox">
+            <span class="vis-direction" id="visDirection">АКТИВНО ПОКУПАТЬ</span>
+            <span class="vis-trend" id="visTrend">Восходящий институциональный импульс</span>
+          </div>
+
+          <div class="trade-levels-grid">
+            <div class="level-box entry">
+              <span class="level-title">ТОЧКА ВХОДА</span>
+              <span class="level-price" id="visEntry">4332.50 - 4333.50</span>
+            </div>
+            <div class="level-box sl">
+              <span class="level-title">СТОП-ЛОСС</span>
+              <span class="level-price" id="visSL">4322.00</span>
+            </div>
+          </div>
+
+          <div class="tp-ladder">
+            <div class="tp-step">
+              <span class="tp-label">TP 1</span>
+              <span class="tp-val" id="visTP1">4348.00</span>
+            </div>
+            <div class="tp-step main">
+              <span class="tp-label">TP 2</span>
+              <span class="tp-val" id="visTP2">4360.50</span>
+            </div>
+            <div class="tp-step">
+              <span class="tp-label">TP 3</span>
+              <span class="tp-val" id="visTP3">4378.00</span>
+            </div>
+          </div>
+
+          <div class="pattern-details">
+            <div class="pattern-item">
+              <span class="pattern-icon">🕯️</span>
+              <div>
+                <b>Свечной паттерн:</b>
+                <span id="visCandlePattern">Бычий пин-бар с длинной тенью снизу</span>
+              </div>
+            </div>
+            <div class="pattern-item">
+              <span class="pattern-icon">📐</span>
+              <div>
+                <b>Графическая фигура:</b>
+                <span id="visChartPattern">Бычий флаг в фазе импульсного продолжения</span>
+              </div>
+            </div>
+            <div class="pattern-item">
+              <span class="pattern-icon">🏛️</span>
+              <div>
+                <b>Smart Money (SMC):</b>
+                <span id="visSMC">Снят пул ликвидности SSL, реакция от Order Block</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="trader-note">
+            <h4>💡 Заключение Institutional Trader MT5:</h4>
+            <p id="visTraderVerdict">График демонстрирует явное преимущество покупателей. Рекомендуется вход на ретесте зоны дисбаланса.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Вкладка 3: 🧠 Технический Мозг & Индикаторы -->
+      <section id="tab-indicators" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <h3>🧠 КОНСЕНСУС 25+ ИНДИКАТОРОВ (XAUUSD)</h3>
+          </div>
+
+          <!-- Осцилляторы -->
+          <h4 class="sub-header">🌊 Осцилляторы</h4>
+          <div class="indicators-table" id="oscillatorsTable">
+            <!-- Dynamic Rows -->
+          </div>
+
+          <!-- Скользящие средние -->
+          <h4 class="sub-header">📊 Скользящие средние (EMA & SMA)</h4>
+          <div class="indicators-table" id="maTable">
+            <!-- Dynamic Rows -->
+          </div>
+
+          <!-- Волатильность & SMC -->
+          <h4 class="sub-header">🏛️ Smart Money Concepts (SMC) & Волатильность</h4>
+          <div class="smc-summary-grid" id="smcGrid">
+            <!-- Dynamic SMC Cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Вкладка 4: 📰 Новости & Влияние на Золото (BUY / SELL) -->
+      <section id="tab-news" class="tab-pane">
+        
+        <!-- Макроэкономический радар XAUUSD -->
+        <div class="card macro-radar-card">
+          <div class="card-header">
+            <h3>🌍 МАКРОЭКОНОМИЧЕСКИЙ РАДАР XAUUSD</h3>
+            <span class="refresh-badge" onclick="fetchNews()"><i class="fa-solid fa-rotate"></i> Обновить</span>
+          </div>
+          <p class="section-desc">
+            Ключевые мировые события, экономический календарь, сила влияния на волатильность и сценарии движения цены (<b>BUY 🟢</b> или <b>SELL 🔴</b>):
+          </p>
+
+          <div class="dxy-card">
+            <div class="dxy-icon">💵</div>
+            <div>
+              <b>Индекс Доллара США (DXY): 102.85 (Инверсная корреляция)</b>
+              <p>Падение доллара DXY ➡️ Взлет Золота (BUY). Укрепление доллара ➡️ Коррекция Золота (SELL).</p>
+            </div>
+          </div>
+
+          <div class="news-drivers-box" id="newsDriversBox">
+            <span class="driver-tag">⚡ ФРС и процентная ставка</span>
+            <span class="driver-tag">⚡ DXY индекс доллара США</span>
+            <span class="driver-tag">⚡ Инфляция CPI & PPI</span>
+            <span class="driver-tag">⚡ Скупка слитков мировыми ЦБ</span>
+            <span class="driver-tag">⚡ Геополитическая премия</span>
+          </div>
+        </div>
+
+        <!-- Фильтры новостей -->
+        <div class="news-filter-bar">
+          <button class="news-filter-btn active" data-filter="all" onclick="filterNews('all')">Все события</button>
+          <button class="news-filter-btn" data-filter="high" onclick="filterNews('high')">💥 Высокая волатильность</button>
+          <button class="news-filter-btn" data-filter="buy" onclick="filterNews('buy')">🟢 Сценарии BUY</button>
+          <button class="news-filter-btn" data-filter="sell" onclick="filterNews('sell')">🔴 Сценарии SELL</button>
+        </div>
+
+        <!-- Динамический список новостных карточек -->
+        <div class="news-events-list" id="newsEventsList">
+          <!-- Dynamic News Cards -->
+        </div>
+
+        <!-- Институциональное руководство по торговле на новостях -->
+        <div class="card news-guide-card">
+          <div class="card-header">
+            <h3>🛡️ ПРАВИЛА ТОРГОВЛИ НА НОВОСТЯХ В METATRADER 5</h3>
+          </div>
+          <div class="news-rule-item">
+            <b class="rule-title">1. За 10 минут до релиза новости:</b>
+            <p>Переведите открытые позиции в безубыток или зафиксируйте часть прибыли. Спреды в MT5 могут расширяться в момент выхода данных.</p>
+          </div>
+          <div class="news-rule-item">
+            <b class="rule-title">2. Правило первой 5-минутной свечи:</b>
+            <p>Не открывайте сделку в первые 15 секунд — дождитесь закрытия первой M5 свечи и входите на ретесте зоны ликвидности по направлению фундаментального триггера.</p>
+          </div>
+          <div class="news-rule-item">
+            <b class="rule-title">3. Золотое правило реакции:</b>
+            <p>Если фактические данные хуже прогноза (слабый доллар) ➡️ Золото моментально выкупается институциональными фондами в Лонг (BUY 🟢).</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Вкладка 5: 👑 Аналитика Топ-Трейдеров, DXY & Риск-Менеджер -->
+      <section id="tab-sentiment" class="tab-pane">
+        
+        <!-- Сентимент и DXY -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🌍 СЕНТИМЕНТ РЫНКА & МАКРОЭКОНОМИКА (DXY)</h3>
+          </div>
+          
+          <div class="sentiment-bar-box">
+            <div class="sentiment-labels">
+              <span class="label-long">📈 Покупатели (Long): <b id="longRatio">67%</b></span>
+              <span class="label-short">Продавцы (Short): <b id="shortRatio">33%</b> 📉</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill long" id="sentimentFill" style="width: 67%;"></div>
+            </div>
+          </div>
+
+          <div class="dxy-card">
+            <div class="dxy-icon">💵</div>
+            <div>
+              <b>Индекс Доллара США (DXY): 102.85</b>
+              <p>Нисходящий тренд доллара толкает котировки Золота (XAUUSD) вверх.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Идеи лучших мировых трейдеров с TradingView -->
+        <div class="card">
+          <div class="card-header">
+            <h3>👑 ИДЕИ ТОП-ТРЕЙДЕРОВ С TRADINGVIEW</h3>
+          </div>
+          <div class="top-ideas-list" id="topIdeasList">
+            <!-- Dynamic Ideas -->
+          </div>
+        </div>
+
+        <!-- Калькулятор лота MT5 -->
+        <div class="card calculator-card">
+          <div class="card-header">
+            <h3>🧮 КАЛЬКУЛЯТОР ЛОТА MT5 ДЛЯ XAUUSD</h3>
+          </div>
+          <div class="calc-form">
+            <div class="form-group">
+              <label>Баланс депозита ($)</label>
+              <input type="number" id="calcBalance" value="1000" class="input-field">
+            </div>
+            <div class="form-group">
+              <label>Риск на сделку (%)</label>
+              <select id="calcRisk" class="input-field">
+                <option value="1">1% (Консервативный)</option>
+                <option value="2" selected>2% (Стандартный)</option>
+                <option value="3">3% (Умеренный)</option>
+                <option value="5">5% (Агрессивный)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Размер стоп-лосса (в пунктах / pips)</label>
+              <input type="number" id="calcSLPips" value="40" class="input-field">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="calculateLotSize()">
+              Рассчитать рекомендуемый лот для MT5
+            </button>
+            <div class="calc-result" id="calcResult">
+              <div class="res-item">
+                <span>Риск в долларах:</span>
+                <b id="riskDollars">$20.00</b>
+              </div>
+              <div class="res-item highlight">
+                <span>Рекомендуемый лот в MT5:</span>
+                <b id="recommendedLot">0.05 LOT</b>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Подключение счета MT5 -->
+        <div class="card account-login-card">
+          <div class="card-header">
+            <h3>🔐 ПОДКЛЮЧЕНИЕ СЧЕТА METATRADER 5</h3>
+            <span class="status-live-badge" id="appAccountBadge">НЕ ПОДКЛЮЧЕН</span>
+          </div>
+          <p class="section-desc">
+            Подключите ваш счёт брокера (демо или реал), чтобы сделки исполнялись в терминале MT5 на телефоне и компьютере:
+          </p>
+          <div class="calc-form">
+            <div class="form-group">
+              <label>Номер счёта MT5 (Login)</label>
+              <input type="number" id="mt5InputLogin" placeholder="Например: 51234567" class="input-field">
+            </div>
+            <div class="form-group">
+              <label>Торговый пароль (Password)</label>
+              <input type="password" id="mt5InputPassword" placeholder="Пароль от счёта" class="input-field">
+            </div>
+            <div class="form-group">
+              <label>Сервер брокера (Server)</label>
+              <input type="text" id="mt5InputServer" placeholder="MetaQuotes-Demo или Exness-Real" class="input-field">
+            </div>
+            <button class="btn btn-primary btn-block" id="btnConnectMT5" onclick="connectBrokerAccount()">
+              Войти и подключить счёт MT5
+            </button>
+            <div id="accountLoginStatus" class="account-login-status" style="display: none;"></div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Нижняя навигационная панель (5 вкладок) -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="tab-signals">
+        <span class="nav-icon">⚡</span>
+        <span>Сигналы</span>
+      </button>
+      <button class="nav-item" data-tab="tab-vision">
+        <span class="nav-icon">📷</span>
+        <span>AI Сканнер</span>
+      </button>
+      <button class="nav-item" data-tab="tab-indicators">
+        <span class="nav-icon">🧠</span>
+        <span>Индикаторы</span>
+      </button>
+      <button class="nav-item" data-tab="tab-news">
+        <span class="nav-icon">📰</span>
+        <span>Новости</span>
+      </button>
+      <button class="nav-item" data-tab="tab-sentiment">
+        <span class="nav-icon">👑</span>
+        <span>Трейдеры</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">Сделка скопирована!</div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

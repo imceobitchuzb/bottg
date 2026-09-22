@@ -1,0 +1,60 @@
+# Environment variables & secrets (NEVER COMMIT SENSITIVE DATA!)
+.env
+*.env
+!.env.example
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Python distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Binary & Executable files
+cloudflared.exe
+*.exe
+
+# Database & SQLite files (preserves local personal history)
+data/*.db
+data/*.sqlite
+!data/.gitkeep
+
+# IDE and Editor configs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Agent / AI local workspace artifacts
+.gemini/
