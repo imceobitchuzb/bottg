@@ -4,27 +4,24 @@ title Установка автозапуска XAUUSD AI Pro Trader 24/7
 cd /d "%~dp0"
 
 echo ======================================================================
-echo    НАСТРОЙКА АВТОЗАПУСКА 24/7 (WINDOWS TASK SCHEDULER)
+echo    НАСТРОЙКА АВТОЗАПУСКА 24/7 (WINDOWS STARTUP)
 echo ======================================================================
 echo.
-echo Создание задачи планировщика Windows для автоматического запуска бота
-echo при входе в систему и восстановления при сбоях...
+echo Создание ярлыка в папке Автозагрузки Windows для автоматического запуска
+echo бота при входе в систему...
 echo.
 
-set TASK_NAME=XAUUSD_AI_Trader_24_7
-set BATCH_PATH=%~dp0run_24_7.bat
-
-schtasks /create /tn "%TASK_NAME%" /tr "\"%BATCH_PATH%\"" /sc onlogon /rl highest /f
+powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut(\"$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\XAUUSD_AI_Trader_24_7.lnk\"); $Shortcut.TargetPath = (Get-Item '%~dp0run_24_7.bat').FullName; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.WindowStyle = 1; $Shortcut.Description = 'XAUUSD AI Pro Trader 24/7 Service'; $Shortcut.Save()"
 
 if %errorlevel% equ 0 (
     echo.
-    echo [УСПЕХ] Задача автозапуска "%TASK_NAME%" успешно зарегистрирована!
-    echo Теперь бот будет автоматически запускаться при старте Windows.
+    echo ======================================================================
+    echo [УСПЕХ] Бот успешно добавлен в Автозагрузку Windows!
+    echo Теперь при каждом включении или перезагрузке ПК бот запустится сам.
+    echo ======================================================================
 ) else (
     echo.
-    echo [ОШИБКА] Требуются права администратора для создания задачи в планировщике.
-    echo Нажмите правой кнопкой мыши на setup_autostart.bat и выберите:
-    echo "Запуск от имени администратора".
+    echo [ОШИБКА] Не удалось создать ярлык в Автозагрузке.
 )
 
 echo.
