@@ -5,6 +5,11 @@ import subprocess
 import logging
 from datetime import datetime
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace', line_buffering=True)
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace', line_buffering=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [WATCHDOG] %(message)s",
